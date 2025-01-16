@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Меню администратора</title>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> <!-- Подключение библиотеки Chart.js -->
+        <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script> <!-- Подключение библиотеки SweetAlert2 -->
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> <!-- Подключение библиотеки Chart.js -->
+        <title>Продукты</title>
+        <style>
+            /* Стили для шапки сайта */
+            header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                background-color: #f4f4f4;
+                padding: 10px 20px;
+                border-bottom: 2px solid #ccc;
+            }
+
+            .logo {
+                width: 50px; /* размер логотипа */
+            }
+
+            .header-title {
+                font-size: 24px;
+                text-align: center;
+                flex-grow: 1;
+            }
+
+            .account-link {
+                text-decoration: none;
+                font-size: 16px;
+                color: #333;
+            }
+
+            .account-link:hover {
+                color: #007bff;
+            }
+
+            /* Стили для таблицы заказов */
+            table {
+                margin-top: 20px;
+                width: 100%;
+            }
+
+            th, td {
+                text-align: center;
+                padding: 12px;
+            }
+
+            th {
+                background-color: #f8f9fa;
+            }
+
+            td {
+                border-top: 1px solid #ddd;
+            }
+
+            /* Стили для сообщения */
+            #message {
+                margin: 20px 0;
+                font-size: 18px;
+                font-weight: bold;
+            }
+            /* Стиль для контейнера графика */
+            #chart-container {
+                margin-top: 20px;
+                display: none; /* Скрыто по умолчанию */
+            }
+            /* Стили для контейнера */
+            .account-container {
+                display: flex;
+                align-items: center; /* Вертикальное выравнивание элементов по центру */
+                justify-content: flex-start; /* Размещение элементов слева */
+            }
+
+            /* Стили для кнопки Logout */
+            .btn-logout {
+                font-size: 12px; /* Маленький шрифт */
+                padding: 5px 10px; /* Уменьшаем внутренние отступы */
+                margin-right: 10px; /* Отступ справа, чтобы кнопка не прилегала к картинке */
+                width: auto; /* Ширина по содержимому */
+            }
+
+            /* Стили для картинки */
+            .logo {
+                width: 40px; /* Устанавливаем фиксированную ширину для картинки */
+                margin-right: 10px; /* Отступ справа */
+            }
+
+            /* Стили для ссылки */
+            .account-link {
+                font-size: 18px; /* Размер шрифта для текста */
+                color: #007bff; /* Цвет текста */
+                text-decoration: none; /* Убираем подчеркивание */
+            }
+
+            .account-link:hover {
+                text-decoration: underline; /* Добавляем подчеркивание при наведении */
+            }
+
+
+        </style>
+</head>
+
+
+<body>
+<header>
+    <!-- Логотип сайта -->
+    <img src="/images/logo.png" alt="Логотип" class="logo">
+
+    <!-- Название магазина по центру -->
+    <div class="header-title">
+        <img src="/images/teleshka.png" alt="Логотип" class="logo">
+        <a href="/client/products" class="account-link">MegaMart "Shop Smart - Live Better"</a>
+    </div>
+
+    <!-- Ссылка на личный кабинет -->
+    <div class="account-container">
+        <form action="/auth/logout" method="get">
+            <button type="submit" class="btn btn-danger btn-logout">Logout</button>
+        </form>
+        <img src="/images/account.png" alt="Личный кабинет администратора" class="logo">
+    </div>
+
+</header>
+
+
+<div class="container mt-4">
+    <h2>Добавить новую категорию</h2>
+    <form action="/admin/category" method="post">
+        <div class="form-group">
+            <label for="name">Название категории</label>
+            <input type="text" id="name" name="name" class="form-control" required>
+        </div>
+        <div class="form-group">
+            <label for="description">Описание категории</label>
+            <textarea id="description" name="description" class="form-control" required></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary">Добавить категорию</button>
+    </form>
+</div>
+<div class="container mt-4">
+    <form id="userSelectForm" method="get">
+        <label for="userId">Выберите пользователя:</label>
+        <select name="userId" id="userId" onchange="loadUserData()">
+            <option value="">Выберите пользователя</option>
+            <!-- Сюда будет динамически добавляться список пользователей -->
+        </select>
+    </form>
+
+    <!-- Список заказов -->
+    <!-- Форма для редактирования пользователя -->
+    <form id="editUserForm" method="post" style="display:none;">
+        <input type="hidden" name="id" id="userIdHidden"/>
+
+        <label for="username">Имя пользователя:</label>
+        <input type="text" id="username" name="username" required/>
+
+        <label for="email">Email:</label>
+        <input type="email" id="email" name="email" required/>
+
+        <label for="role">Роль:</label>
+        <select id="role" name="role">
+            <option value="CLIENT">Пользователь</option>
+            <option value="ADMIN">Администратор</option>
+            <option value="SALESMAN">Продавец</option>
+        </select>
+
+        <label for="balance">Баланс:</label>
+        <input type="number" id="balance" name="balance" step="0.01" required/>
+
+        <button type="submit" class="btn btn-primary">Сохранить изменения</button>
+    </form>
+</div>
+<script>
+    // Функция для загрузки данных пользователя
+
+    function loadUsers() {
+        fetch('/admin/get-users')  // Запрос на сервер для получения списка пользователей
+            .then(response => response.json())
+            .then(users => {
+                const selectElement = document.getElementById('userId');
+                selectElement.innerHTML = '<option value="">Выберите пользователя</option>'; // Очищаем текущие опции
+
+                // Добавляем новые опции для каждого пользователя
+                users.forEach(user => {
+                    const option = document.createElement('option');
+                    option.value = user.id;
+                    option.textContent = user.username;
+                    selectElement.appendChild(option);
+                });
+            })
+            .catch(error => {
+                console.error('Ошибка загрузки данных пользователей:', error);
+            });
+    }
+
+    async function loadUserData() {
+        const userId = document.getElementById('userId').value;
+
+        // Если выбран ID пользователя
+        if (userId) {
+            const response = await fetch(`/admin/get-user-data?userId=${userId}`);
+            const userData = await response.json();
+            console.log(userData);
+            // Обновление формы для редактирования
+            document.getElementById('userIdHidden').value = userId;
+            document.getElementById('username').value = userData.username;
+            document.getElementById('email').value = userData.email;
+            document.getElementById('role').value = userData.role;
+            document.getElementById('balance').value = userData.balance;
+
+            // Отображение формы редактирования
+            document.getElementById('editUserForm').style.display = 'block';
+        } else {
+            // Если нет выбранного пользователя, скрыть форму
+            document.getElementById('editUserForm').style.display = 'none';
+        }
+    }
+
+    // Обработка отправки формы редактирования
+    document.getElementById('editUserForm').addEventListener('submit', async function (e) {
+        e.preventDefault();
+
+        const formData = new FormData(this);
+        const response = await fetch('/admin/edit-user', {
+            method: 'POST',
+            body: formData
+        });
+
+        if (response.ok) {
+            Swal.fire({
+                title: 'Успех!',
+                text: 'Пользователь успешно обновлен!',
+                icon: 'success',
+                confirmButtonText: 'ОК'
+            });
+        } else {
+            Swal.fire({
+                title: 'Ошибка!',
+                text: 'Ошибка при обновлении пользователя.',
+                icon: 'error',
+                confirmButtonText: 'ОК'
+            });
+        }
+    });
+    window.onload = loadUsers;
+</script>
+</body>
+</html>

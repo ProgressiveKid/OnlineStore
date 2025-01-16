@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <title>Продукты</title>
+    <style>
+        /* Стили для шапки сайта */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: #f8f9fa;
+            padding: 10px 20px;
+            border-bottom: 2px solid #ddd;
+        }
+        .header-title {
+            font-family: 'Roboto', sans-serif; /* Применение шрифта Roboto */
+            font-size: 24px;
+            text-align: center;
+            flex-grow: 1;
+        }
+        .logo {
+            width: 50px;
+        }
+
+        .header-title {
+            font-size: 24px;
+            font-weight: bold;
+            text-align: center;
+            flex-grow: 1;
+        }
+
+        .account-link {
+            text-decoration: none;
+            font-size: 16px;
+            color: #007bff;
+        }
+
+        .account-link:hover {
+            color: #0056b3;
+        }
+
+        .category-list {
+            list-style-type: none;
+            padding-left: 0;
+        }
+
+        .category-list li {
+            margin-bottom: 8px;
+        }
+
+        .category-link {
+            font-size: 18px;
+            color: #333;
+            text-decoration: none;
+        }
+
+        .category-link:hover {
+            color: #007bff;
+        }
+
+        .message {
+            margin: 20px 0;
+            font-size: 18px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+<header>
+    <!-- Логотип сайта -->
+    <img src="/images/logo.png" alt="Логотип" class="logo">
+
+    <!-- Название магазина по центру -->
+    <div class="header-title">
+        <img src="/images/teleshka.png" alt="Логотип" class="logo">
+        <a href="/client/products" class="account-link">MegaMart "Shop Smart - Live Better"</a>
+    </div>
+
+    <!-- Ссылка на личный кабинет -->
+    <img src="/images/account.png" alt="Личный кабинет" class="logo">
+    <a href="/client/account" class="account-link">Личный кабинет</a>
+</header>
+
+<div class="container mt-4">
+    <!-- Блок для отображения сообщений -->
+    <div id="message" class="message"></div>
+
+    <!-- Раздел с категориями и продуктами -->
+    <div class="row">
+        <!-- Список категорий (левая колонка) -->
+        <div class="col-md-3">
+            <div class="mb-4">
+                <h1>Категории</h1>
+                <ul class="category-list list-group">
+                    <li th:each="category : ${category}" class="list-group-item">
+                        <a href="javascript:void(0);" class="category-link"
+                           th:onclick="'setCategoryId(' + ${category.categoryId} + '); loadProducts(' + ${category.categoryId} + ');'"
+                           th:text="${category.name}"></a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Список продуктов (правая колонка) -->
+        <div class="col-md-9">
+            <h1>Список продуктов</h1>
+            <table class="table table-striped table-bordered">
+                <thead>
+                <tr>
+                    <th>Название</th>
+                    <th>Описание</th>
+                    <th>Цена</th>
+                    <th>Категория</th>
+                    <th>Количество на складе</th>
+                    <th>Изображение</th>
+                    <th>Действие</th>
+                </tr>
+                </thead>
+                <tbody id="products-table-body">
+                <!-- Товары будут динамически добавляться сюда -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    let selectedCategoryId = null; // Глобальная переменная для хранения выбранной категории
+
+    function setCategoryId(categoryId) {
+        selectedCategoryId = categoryId; // Сохраняем выбранный ID категории
+    }
+
+    // Функция для загрузки товаров по категории
+    function loadProducts(categoryId) {
+        console.log(categoryId);
+        fetch(`/client/products/${categoryId}`)
+            .then(response => response.json())
+            .then(products => {
+                console.log(products);
+                const productsTableBody = document.getElementById('products-table-body');
+
+                productsTableBody.innerHTML = ''; // Очистка таблицы перед добавлением новых данных
+                products.forEach(product => {
+                    const imagePath = `/${product.imageUrl}`;
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${product.name}</td>
+                        <td>${product.description}</td>
+                        <td>${product.price} ₽</td>
+                        <td>${product.category.name}</td>
+                        <td>${product.stockQuantity}</td>
+                        <td>  <img src="${imagePath}" alt="Menu Image" style="width: 100px; height: 100px;" /> </td>
+                        <td>
+                            <form id="buy-form-${product.productId}" action="/client/buy/${product.productId}" method="post">
+                                <button type="submit" class="btn btn-primary">Заказать</button>
+                            </form>
+                        </td>
+                    `;
+                    productsTableBody.appendChild(row);
+
+                    // Добавление обработчика события для формы
+                    const form = document.getElementById(`buy-form-${product.productId}`);
+                    form.addEventListener('submit', function(event) {
+                        event.preventDefault(); // Предотвращаем стандартное поведение формы
+                        buyProduct(product.productId);
+                    });
+                });
+            })
+            .catch(error => console.error('Ошибка при загрузке товаров:', error));
+    }
+
+    // Функция для отправки POST-запроса на покупку товара
+    function buyProduct(productId) {
+        fetch(`/client/buy/${productId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+        })
+            .then(response => {
+                if (response.ok) {
+                    return response.text();
+                } else {
+                    throw new Error('Ошибка при покупке товара');
+                }
+            })
+            .then(message => {
+                // Отображаем сообщение об успехе
+                const messageElement = document.getElementById('message');
+                messageElement.textContent = message;
+                messageElement.style.color = 'green';
+                // Воспроизведение MP3 звука
+                const audio = new Audio('/sound/buy_sound.mp3'); // Указываем путь к аудиофайлу
+                audio.play(); // Воспроизводим звук
+                loadProducts(selectedCategoryId);
+            })
+            .catch(error => {
+                // Отображаем сообщение об ошибке
+                const messageElement = document.getElementById('message');
+                messageElement.textContent = 'Недостаточно средств';
+                messageElement.style.color = 'red';
+                console.error('Ошибка:', error);
+            });
+    }
+</script>
+</body>
+</html>

@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> <!-- Подключение библиотеки Chart.js -->
+    <title>Продукты</title>
+    <style>
+        /* Стили для шапки сайта */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: #f4f4f4;
+            padding: 10px 20px;
+            border-bottom: 2px solid #ccc;
+        }
+
+        .logo {
+            width: 50px; /* размер логотипа */
+        }
+
+        .header-title {
+            font-size: 24px;
+            text-align: center;
+            flex-grow: 1;
+        }
+
+        .account-link {
+            text-decoration: none;
+            font-size: 16px;
+            color: #333;
+        }
+
+        .account-link:hover {
+            color: #007bff;
+        }
+
+        /* Стили для таблицы заказов */
+        table {
+            margin-top: 20px;
+            width: 100%;
+        }
+
+        th, td {
+            text-align: center;
+            padding: 12px;
+        }
+
+        th {
+            background-color: #f8f9fa;
+        }
+
+        td {
+            border-top: 1px solid #ddd;
+        }
+
+        /* Стили для сообщения */
+        #message {
+            margin: 20px 0;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        /* Стиль для контейнера графика */
+        #chart-container {
+            margin-top: 20px;
+            display: none; /* Скрыто по умолчанию */
+        }
+        /* Стили для контейнера */
+        .account-container {
+            display: flex;
+            align-items: center; /* Вертикальное выравнивание элементов по центру */
+            justify-content: flex-start; /* Размещение элементов слева */
+        }
+
+        /* Стили для кнопки Logout */
+        .btn-logout {
+            font-size: 12px; /* Маленький шрифт */
+            padding: 5px 10px; /* Уменьшаем внутренние отступы */
+            margin-right: 10px; /* Отступ справа, чтобы кнопка не прилегала к картинке */
+            width: auto; /* Ширина по содержимому */
+        }
+
+        /* Стили для картинки */
+        .logo {
+            width: 40px; /* Устанавливаем фиксированную ширину для картинки */
+            margin-right: 10px; /* Отступ справа */
+        }
+
+        /* Стили для ссылки */
+        .account-link {
+            font-size: 18px; /* Размер шрифта для текста */
+            color: #007bff; /* Цвет текста */
+            text-decoration: none; /* Убираем подчеркивание */
+        }
+
+        .account-link:hover {
+            text-decoration: underline; /* Добавляем подчеркивание при наведении */
+        }
+
+
+    </style>
+</head>
+<body>
+
+<header>
+    <!-- Логотип сайта -->
+    <img src="/images/logo.png" alt="Логотип" class="logo">
+
+    <!-- Название магазина по центру -->
+    <div class="header-title">
+        <img src="/images/teleshka.png" alt="Логотип" class="logo">
+        <a href="/client/products" class="account-link">MegaMart "Shop Smart - Live Better"</a>
+    </div>
+
+    <!-- Ссылка на личный кабинет -->
+    <div class="account-container">
+        <form action="/auth/logout" method="get">
+            <button type="submit" class="btn btn-danger btn-logout">Logout</button>
+        </form>
+        <img src="/images/account.png" alt="Личный кабинет" class="logo">
+        <a href="/client/account" class="account-link">Личный кабинет</a>
+    </div>
+
+</header>
+
+<!-- Блок для отображения сообщений -->
+<div id="balance" class="container mt-4">
+    <h1> Баланс <p th:text="${balance}"></p> </h1>
+</div>
+<!-- Контейнер для графика -->
+<div id="chart-container" class="container mt-4">
+    <canvas id="categoryChart"></canvas>
+</div>
+
+<div class="container mt-4">
+    <button id="toggle-chart" class="btn btn-secondary mt-4">Показать график</button>
+</div>
+
+<div id="message" class="container mt-4">
+    <h1><p th:text="${message}"></p> </h1>
+</div>
+
+<div class="container mt-4">
+    <h1>Пополнение баланса</h1>
+    <form id="balance-form">
+        <div class="form-group">
+            <label for="amount">Сумма пополнения:</label>
+            <input type="number" step="0.01" class="form-control" id="amount" name="amount" placeholder="Введите сумму" required>
+        </div>
+        <button type="submit" class="btn btn-primary">Пополнить баланс</button>
+    </form>
+    <div id="message" class="message"></div>
+</div>
+<!-- Заголовок страницы -->
+<div class="container mt-4">
+    <h1>Список заказов</h1>
+    <div class="container mt-4">
+        <div class="form-inline" style="flex-wrap: nowrap;">
+            <!-- Фильтрация по категории -->
+            <label for="category-filter" class="mr-2">Фильтр по категории:</label>
+            <input type="text" id="category-filter" class="form-control mr-4" placeholder="Введите название категории">
+
+            <!-- Фильтрация по товару -->
+            <label for="product-filter" class="mr-2">Фильтр по товару:</label>
+            <input type="text" id="product-filter" class="form-control mr-4" placeholder="Введите название товара">
+
+            <!-- Сортировка по дате -->
+            <label for="sort-order" class="mr-2">Сортировка по дате:</label>
+            <select id="sort-order" class="form-control">
+                <option value="asc">По возрастанию</option>
+                <option value="desc">По убыванию</option>
+            </select>
+        </div>
+    </div>
+
+
+    <!-- Таблица для отображения заказов -->
+    <table id="ordersTable" class="table table-bordered table-striped">
+    <thead>
+        <tr>
+            <th>ID заказа</th>
+            <th>Категория</th>
+            <th>Название продукта</th>
+            <th>Описание</th>
+            <th>Цена (руб)</th>
+            <th>Время покупки</th> <!-- Новый столбец -->
+        </tr>
+        </thead>
+        <tbody>
+        <!-- Итерация по списку заказов -->
+        <tr th:each="order : ${order}">
+            <td th:text="${order.orderId}">ID заказа</td>
+            <td th:text="${order.categoryName}">Категория</td>
+            <td th:text="${order.productName}">Название продукта</td>
+            <td th:text="${order.description}">Описание</td>
+            <td th:text="${order.price}">Цена (руб)</td>
+            <td th:text="${#temporals.format(order.orderDate, 'dd.MM.yyyy HH:mm:ss')}"
+                data-timestamp="${order.orderDate}">Время покупки</td>
+        </tr>
+        </tbody>
+    </table>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const categoryFilterInput = document.getElementById('category-filter');
+        const productFilterInput = document.getElementById('product-filter');
+        const sortOrderSelect = document.getElementById('sort-order');
+        const tableBody = document.querySelector('table tbody');
+
+        // Функция для фильтрации строк таблицы по категории и товару
+        function filterTable() {
+            const category = categoryFilterInput.value.trim().toLowerCase();
+            const product = productFilterInput.value.trim().toLowerCase();
+            const rows = tableBody.querySelectorAll('tr');
+
+            rows.forEach(row => {
+                const categoryName = row.cells[1].innerText.trim().toLowerCase();
+                const productName = row.cells[2].innerText.trim().toLowerCase();
+
+                const categoryMatch = category === '' || categoryName.includes(category);
+                const productMatch = product === '' || productName.includes(product);
+
+                row.style.display = categoryMatch && productMatch ? '' : 'none';
+            });
+        }
+
+        // Обработчики для ввода фильтров
+        categoryFilterInput.addEventListener('input', filterTable);
+        productFilterInput.addEventListener('input', filterTable);
+
+        // Функция для преобразования строки даты в формат, который можно сравнивать
+        function parseDate(dateString) {
+            const [day, month, year, hour, minute, second] = dateString.split(/[\s.:]+/);
+            // Возвращаем новый формат 'yyyy-MM-ddTHH:mm:ss', который понимает JavaScript
+            return new Date(`${year}-${month}-${day}T${hour}:${minute}:${second}`);
+        }
+
+        // Функция для сортировки строк таблицы по дате
+        function sortTableByDate(order) {
+            const table = document.getElementById('ordersTable');
+            if (!table) {
+                console.error('Таблица с ID "ordersTable" не найдена');
+                return;
+            }
+
+            const rows = Array.from(table.rows).slice(1); // Пропускаем заголовок
+
+            // Сортировка строк
+            rows.sort((rowA, rowB) => {
+                const dateA = parseDate(rowA.cells[5].getAttribute('data-timestamp'));
+                const dateB = parseDate(rowB.cells[5].getAttribute('data-timestamp'));
+                return order === 'asc' ? dateA - dateB : dateB - dateA;
+            });
+
+            // Перестраиваем таблицу
+            rows.forEach(row => table.tBodies[0].appendChild(row));
+        }
+    });
+
+
+
+    document.getElementById('balance-form').addEventListener('submit', function(event) {
+        event.preventDefault(); // Предотвращаем стандартное поведение формы
+
+        const amount = document.getElementById('amount').value;
+        const messageElement = document.getElementById('message');
+        const balanceElement = document.getElementById('balance');
+
+        if (isNaN(amount) || amount <= 0) {
+            messageElement.textContent = 'Ошибка: сумма пополнения должна быть больше нуля.';
+            messageElement.style.color = 'red';
+            return;
+        }
+        fetch('/client/balance', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: new URLSearchParams({ amount: amount })
+        })
+            .then(response => response.json())  // Преобразуем ответ в формат JSON
+            .then(data => {
+                if (data.message) {  // Используем данные, полученные с сервера
+                    messageElement.textContent = data.message;
+                    messageElement.style.color = data.message === "Баланс успешно пополнен." ? 'green' : 'red';
+                    if (data.balance !== undefined) {
+                        balanceElement.textContent = `Баланс: ${data.balance} ₽`;
+                    }
+                    const audio = new Audio('/sound/deposit.mp3'); // Указываем путь к аудиофайлу
+                    audio.play(); // Воспроизводим звук
+                }
+            })
+            .catch(error => {
+                messageElement.textContent = 'Ошибка: ' + error.message;
+                messageElement.style.color = 'red';
+            });
+    });
+
+
+</script>
+<script>
+    // Функция для сбора данных из таблицы
+    function getOrderData() {
+        const categories = [];
+        const products = [];
+
+        // Получаем все строки таблицы (кроме заголовка)
+        const rows = document.querySelectorAll('table tbody tr');
+
+        rows.forEach(row => {
+            const category = row.cells[1].innerText.trim();
+            const product = row.cells[2].innerText.trim();
+
+            // Если категория уже есть, увеличиваем счетчик
+            if (categories.includes(category)) {
+                products[categories.indexOf(category)].count++;
+            } else {
+                categories.push(category);
+                products.push({ product: product, count: 1 });
+            }
+        });
+
+        return { categories, productCount: products };
+    }
+
+    // Инициализация графика
+    const ctx = document.getElementById('categoryChart').getContext('2d');
+    const chart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: [], // Пусто, так как данные будем заполнять динамически
+            datasets: [{
+                label: 'Количество купленных товаров по категориям',
+                data: [], // Пусто, заполним динамически
+                backgroundColor: ['#4CAF50', '#FF9800', '#2196F3'],
+                borderColor: ['#388E3C', '#F57C00', '#1976D2'],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+
+    // Скрытие или отображение графика
+    document.getElementById('toggle-chart').addEventListener('click', function() {
+        const chartContainer = document.getElementById('chart-container');
+        const button = document.getElementById('toggle-chart');
+
+        // Собираем данные из таблицы
+        const data = getOrderData();
+
+        // Обновляем данные графика
+        chart.data.labels = data.categories;
+        chart.data.datasets[0].data = data.productCount.map(item => item.count);
+
+        // Перерисовываем график
+        chart.update();
+
+        if (chartContainer.style.display === 'none') {
+            chartContainer.style.display = 'block';
+            button.textContent = 'Скрыть график';
+        } else {
+            chartContainer.style.display = 'none';
+            button.textContent = 'Показать график';
+        }
+    });
+</script>
+</body>
+</html>

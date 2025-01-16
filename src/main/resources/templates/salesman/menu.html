@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <title>Продукты</title>
+    <style>
+        /* Стили для шапки сайта */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: #f4f4f4;
+            padding: 10px 20px;
+            border-bottom: 2px solid #ccc;
+        }
+
+        .logo {
+            width: 50px; /* размер логотипа */
+        }
+
+        .header-title {
+            font-size: 24px;
+            text-align: center;
+            flex-grow: 1;
+        }
+
+        .account-link {
+            text-decoration: none;
+            font-size: 16px;
+            color: #333;
+        }
+
+        .account-link:hover {
+            color: #007bff;
+        }
+
+        /* Стили для таблицы заказов */
+        table {
+            margin-top: 20px;
+            width: 100%;
+        }
+
+        th, td {
+            text-align: center;
+            padding: 12px;
+        }
+
+        th {
+            background-color: #f8f9fa;
+        }
+
+        td {
+            border-top: 1px solid #ddd;
+        }
+
+        /* Стили для сообщения */
+        #message {
+            margin: 20px 0;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        /* Стиль для контейнера графика */
+        #chart-container {
+            margin-top: 20px;
+            display: none; /* Скрыто по умолчанию */
+        }
+        /* Стили для контейнера */
+        .account-container {
+            display: flex;
+            align-items: center; /* Вертикальное выравнивание элементов по центру */
+            justify-content: flex-start; /* Размещение элементов слева */
+        }
+
+        /* Стили для кнопки Logout */
+        .btn-logout {
+            font-size: 12px; /* Маленький шрифт */
+            padding: 5px 10px; /* Уменьшаем внутренние отступы */
+            margin-right: 10px; /* Отступ справа, чтобы кнопка не прилегала к картинке */
+            width: auto; /* Ширина по содержимому */
+        }
+
+        /* Стили для картинки */
+        .logo {
+            width: 40px; /* Устанавливаем фиксированную ширину для картинки */
+            margin-right: 10px; /* Отступ справа */
+        }
+
+        /* Стили для ссылки */
+        .account-link {
+            font-size: 18px; /* Размер шрифта для текста */
+            color: #007bff; /* Цвет текста */
+            text-decoration: none; /* Убираем подчеркивание */
+        }
+
+        .account-link:hover {
+            text-decoration: underline; /* Добавляем подчеркивание при наведении */
+        }
+
+
+    </style>
+</head>
+<body>
+<header>
+    <!-- Логотип сайта -->
+    <img src="/images/logo.png" alt="Логотип" class="logo">
+
+    <!-- Название магазина по центру -->
+    <div class="header-title">
+        <img src="/images/teleshka.png" alt="Логотип" class="logo">
+        <a href="/client/products" class="account-link">MegaMart "Shop Smart - Live Better"</a>
+    </div>
+
+    <!-- Ссылка на личный кабинет -->
+    <div class="account-container">
+        <form action="/auth/logout" method="get">
+            <button type="submit" class="btn btn-danger btn-logout">Logout</button>
+        </form>
+        <img src="/images/account.png" alt="Личный кабинет продавца" class="logo">
+    </div>
+
+</header>
+
+<div class="container mt-4">
+    <!-- Блок для отображения сообщений -->
+    <div id="message" class="message"></div>
+
+    <!-- Раздел с категориями и продуктами -->
+    <div class="row">
+        <!-- Список категорий (левая колонка) -->
+        <div class="col-md-3">
+            <div class="mb-4">
+                <h1>Категории</h1>
+                <ul class="category-list list-group">
+                    <li th:each="category : ${category}" class="list-group-item">
+                        <a href="javascript:void(0);" class="category-link"
+                           th:onclick="'setCategoryId(' + ${category.categoryId} + '); loadProducts(' + ${category.categoryId} + ');'"
+                           th:text="${category.name}"></a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Список продуктов (правая колонка) -->
+        <div class="col-md-9">
+            <h1>Список продуктов</h1>
+            <table class="table table-striped table-bordered">
+                <thead>
+                <tr>
+                    <th>Название</th>
+                    <th>Описание</th>
+                    <th>Цена</th>
+                    <th>Категория</th>
+                    <th>Количество на складе</th>
+                    <th>Изображение</th>
+                    <th>Действие</th>
+                </tr>
+                </thead>
+                <tbody id="products-table-body">
+                <!-- Товары будут динамически добавляться сюда -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="container mt-5">
+    <h1 class="text-center mb-4">Создание нового товара</h1>
+
+    <form id="productForm" enctype="multipart/form-data" class="needs-validation" novalidate>
+        <!-- Название товара -->
+        <div class="mb-3">
+            <label for="name" class="form-label">Название товара:</label>
+            <input type="text" id="name" name="name" class="form-control" placeholder="Введите название товара" required>
+            <div class="invalid-feedback">Пожалуйста, укажите название товара.</div>
+        </div>
+
+        <!-- Описание товара -->
+        <div class="mb-3">
+            <label for="description" class="form-label">Описание товара:</label>
+            <textarea id="description" name="description" class="form-control" rows="3" placeholder="Введите описание товара" required></textarea>
+            <div class="invalid-feedback">Пожалуйста, укажите описание товара.</div>
+        </div>
+
+        <!-- Цена товара -->
+        <div class="mb-3">
+            <label for="price" class="form-label">Цена товара: (₽)</label>
+            <input type="number" id="price" name="price" class="form-control" step="0.01" placeholder="Введите цену товара" required>
+            <div class="invalid-feedback">Пожалуйста, укажите цену товара.</div>
+        </div>
+
+        <!-- Категория товара -->
+        <div class="mb-3">
+            <label for="category" class="form-label">Категория товара:</label>
+            <select id="category" name="categoryId" class="form-select" required>
+                <option value="" disabled selected>Выберите категорию</option>
+                <!-- Динамическая загрузка категорий -->
+            </select>
+            <div class="invalid-feedback">Пожалуйста, выберите категорию товара.</div>
+        </div>
+
+        <!-- Количество на складе -->
+        <div class="mb-3">
+            <label for="stockQuantity" class="form-label">Количество на складе:</label>
+            <input type="number" id="stockQuantity" name="stockQuantity" class="form-control" placeholder="Введите количество" required>
+            <div class="invalid-feedback">Пожалуйста, укажите количество на складе.</div>
+        </div>
+
+        <!-- Картинка -->
+        <div class="mb-3">
+            <label for="image" class="form-label">Картинка:</label>
+            <input type="file" id="image" name="image" class="form-control">
+        </div>
+
+        <!-- Кнопка -->
+        <div class="text-center">
+            <button type="submit" class="btn btn-primary">Создать товар</button>
+        </div>
+    </form>
+
+</div>
+
+<script>
+    const categorySelect = document.getElementById('category');
+
+    // Добавляем обработчик события на изменение выбранной категории
+    categorySelect.addEventListener('change', function() {
+        const selectedCategoryId = categorySelect.value; // Получаем выбранное значение
+        console.log('Выбранная категория:', selectedCategoryId); // Логируем выбранную категорию
+    });
+
+
+    document.getElementById('productForm').addEventListener('submit', function(event) {
+        event.preventDefault(); // Отменить стандартную отправку формы
+
+        const formData = new FormData(this); // Создаем объект FormData для отправки данных
+
+        console.log(formData);
+        fetch('/salesman/createProduct', {
+            method: 'POST',
+            body: formData // Отправляем данные формы
+        })
+            .then(response => response.json()) // Ожидаем ответ в формате JSON
+            .then(data => {
+                // Обработка успешного ответа
+                if (data.message) {
+                    Swal.fire('Успех', data.message, 'success'); // Заменили alert на swal// Выводим сообщение о результате
+                }
+            })
+            .catch(error => {
+                // Обработка ошибки
+                console.error('Ошибка:', error);
+                Swal.fire('Ошибка', error, 'error'); // Заменили alert на swal
+            });
+    });
+
+    // Подгружаем категории из эндпоинта /getCategory
+    fetch('/salesman/getCategory')
+        .then(response => response.json())
+        .then(data => {
+            console.log('Полученные данные:', data);
+            const categorySelect = document.getElementById('category');
+
+            // Проходим по полученным категориям и добавляем их в выпадающий список
+            data.categories.forEach(category => {
+                const option = document.createElement('option');
+                option.value = category.categoryId;  // id категории
+                option.textContent = category.name;  // Название категории
+                categorySelect.appendChild(option);
+            });
+        })
+        .catch(error => {
+            console.error('Ошибка при загрузке категорий:', error);
+        });
+</script>
+<script>
+    let selectedCategoryId = null; // Глобальная переменная для хранения выбранной категории
+
+    function setCategoryId(categoryId) {
+        selectedCategoryId = categoryId; // Сохраняем выбранный ID категории
+    }
+
+    // Функция для загрузки товаров по категории
+    function loadProducts(categoryId) {
+        console.log(categoryId);
+        fetch(`/client/products1/${categoryId}`)
+            .then(response => response.json())
+            .then(products => {
+                console.log(products);
+                const productsTableBody = document.getElementById('products-table-body');
+                productsTableBody.innerHTML = ''; // Очистка таблицы перед добавлением новых данных
+                products.forEach(product => {
+                    const row = document.createElement('tr');
+                    console.log(product.imageUrl);
+                    const imagePath = `/${product.imageUrl}`;
+                    row.innerHTML = `
+                        <td>${product.name}</td>
+                        <td>${product.description}</td>
+                        <td>${product.price} ₽</td>
+                        <td>${product.category.name}</td>
+                        <td>${product.stockQuantity}</td>
+                        <td>
+                                <img src="${imagePath}" alt="Menu Image" style="width: 100px; height: 100px;" />
+                        </td>
+                        <td>
+                           <form id="buy-form-${product.productId}" action="/salesman/add-to-sclad/${product.productId}" method="post">
+                                <label for="quantity">Количество:</label>
+                                <input type="number" id="quantity" name="quantity" min="1" required>
+                                <button type="submit" class="btn btn-primary">Пополнить склад</button>
+                            </form>
+                        </td>
+                    `;
+                    productsTableBody.appendChild(row);
+
+                    // Добавление обработчика события для формы
+                    const form = document.getElementById(`buy-form-${product.productId}`);
+                    form.addEventListener('submit', function(event) {
+                        event.preventDefault(); // Предотвращаем стандартное поведение формы
+                        handleAddToScladFormSubmit(event);
+                    });
+                });
+            })
+            .catch(error => console.error('Ошибка при загрузке товаров:', error));
+    }
+
+    // Функция для отправки POST-запроса на пополнение склада
+    function handleAddToScladFormSubmit(event) {
+        event.preventDefault();
+
+        const form = event.target;
+        const productId = form.action.split("/").pop();  // Получаем productId из action
+        const quantity = form.querySelector('input[name="quantity"]').value;
+        console.log(productId);
+        console.log(quantity);
+        // Отправляем запрос на сервер
+        fetch(`/salesman/add-to-sclad/${productId}?quantity=${quantity}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded'
+            },
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    Swal.fire('Успех', "Склад успешно пополнен!", 'success');
+                    loadProducts(selectedCategoryId);
+                } else {
+                    Swal.fire('Ошибка', "Произошла ошибка при пополнении склада.", 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                Swal.fire('Ошибка', "Произошла ошибка при запросе.", 'error');
+            });
+    }
+
+    // Применение функции к каждому сабмиту формы
+    document.querySelectorAll('form[id^="buy-form-"]').forEach(form => {
+        form.addEventListener('submit', handleAddToScladFormSubmit);
+    });
+</script>
+</body>
+</html>
